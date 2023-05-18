@@ -30,3 +30,5 @@ exports.down = function (knex) {
 };
 
 exports.config = { transaction: false };
+
+

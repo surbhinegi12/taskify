@@ -9,8 +9,8 @@ var app = express();
 const port = 3001;
 app.use(express.json());
 
-// app.use("/", indexRouter);
-// app.use("/users", membersRouter);
+app.use("/", indexRouter);
+app.use("/users", usersRouter);
 // app.use("/tasks", tasksRouter);
 // app.use("/todos", todosRouter);
 
