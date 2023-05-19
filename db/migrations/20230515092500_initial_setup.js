@@ -6,6 +6,11 @@ exports.up = async function (knex) {
       table.string("name", 50).notNullable();
       table.string("email", 50).notNullable();
       table.text("password").notNullable();
+      table.datetime("deletedAt").defaultTo(null);
+      table.unique(["email"], {
+        indexName: "unique_email_index",
+        predicate: knex.where("deletedAt", null),
+      });
     })
     .createTable("todos", function (table) {
       table.increments("id");
@@ -15,7 +20,7 @@ exports.up = async function (knex) {
     .createTable("tasks", function (table) {
       table.increments("id");
       table.integer("todoId").notNullable().references("todos.id");
-      table.datetime("created_at").defaultTo(knex.fn.now());
+      table.datetime("createdAt").defaultTo(knex.fn.now());
       table.date("deadline").notNullable();
       table.text("description");
       table
@@ -30,5 +35,3 @@ exports.down = function (knex) {
 };
 
 exports.config = { transaction: false };
-
-
