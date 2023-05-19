@@ -5,7 +5,6 @@ var usersRouter = require("./routes/users");
 var todosRouter = require("./routes/todos");
 
 var app = express();
-
 const port = 3001;
 app.use(express.json());
 

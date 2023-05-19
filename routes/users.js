@@ -1,4 +1,7 @@
 var express = require("express");
+const jwt = require("jsonwebtoken");
+const { verifyToken } = require("../validations/middleware");
+
 var router = express.Router();
 const DB = require("../services/DB");
 const bcrypt = require("bcrypt");
@@ -19,7 +22,9 @@ router.post("/signup", async (req, res) => {
   try {
     const [existingUser] = await DB("users").where({ email });
     if (existingUser) {
-      return res.status(400).send("User with this email already exists");
+      return res
+        .status(400)
+        .json({ error: "User with this email already exists" });
     }
     const [newUser] = await DB("users")
       .insert({
@@ -28,13 +33,13 @@ router.post("/signup", async (req, res) => {
         password: hash,
       })
       .returning("id");
-    res.status(201).send(`User with id ${newUser.id} created`);
+    res.status(201).json({ msg: `User with id ${newUser.id} created` });
   } catch (err) {
     if (err.code === "23502") {
-      return res.status(400).send("Required field missing");
+      return res.status(400).json({ error: "Required field missing" });
     } else {
       console.error(err);
-      return res.status(500).send("Internal server error");
+      return res.status(500).json({ error: "Internal server error" });
     }
   }
 });
@@ -47,13 +52,20 @@ router.post("/login", async (req, res) => {
       .first()
       .then((user) => {
         if (!user) {
-          res.status(401).send("Invalid email or password");
+          res.status(401).json({ error: "Invalid email or password" });
         } else {
           bcrypt.compare(password, user.password, (err, result) => {
             if (result) {
-              res.status(200).send(`Login successfull`);
+              const secretKey = process.env.SECRET_KEY;
+
+              const token = jwt.sign({ userId: user.id }, secretKey, {
+                expiresIn: "1h",
+              });
+              res
+                .status(200)
+                .json({ msg: `Login successfull with token id ${token} ` });
             } else {
-              res.status(401).send("Invalid email or password");
+              res.status(401).json({ error: "Invalid email or password" });
             }
           });
         }
@@ -63,17 +75,36 @@ router.post("/login", async (req, res) => {
   }
 });
 
-router.delete("/:id", async (req, res) => {
-  const { id } = req.params;
+router.post("/logout", verifyToken, (req, res) => {
   try {
-    await DB("tasks").whereIn("todoId", function () {
-        this.select("id").from("todos").where("userId", id);
-      }).delete();
-      await DB("todos").where({ userId: id }).delete();
-    const result = await DB("users").where({ id: id }).delete();
+    const token = req.headers.authorization.split(" ")[1];
+    res.clearCookie(token);
+
+    res.status(200).json({ msg: "Logout successful" });
+  } catch (err) {
+    res.status(500).json({ error: "An error occurred during logout" });
+  }
+});
+
+router.delete("/:id", verifyToken, async (req, res) => {
+  const idToDelete = req.params.id;
+  const requestingUserId = req.userId;
+
+  if (requestingUserId != idToDelete) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  try {
+    await DB("tasks")
+      .whereIn("todoId", function () {
+        this.select("id").from("todos").where("userId", idToDelete);
+      })
+      .delete();
+    await DB("todos").where({ userId: idToDelete }).delete();
+    const result = await DB("users").where({ id: idToDelete }).delete();
 
     if (result != 0) {
-      res.status(200).send(`User with id ${id} deleted`);
+      res.status(200).json({ msg: `User with id ${idToDelete} deleted` });
     }
   } catch (err) {
     res.status(500).json(err);
