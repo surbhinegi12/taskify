@@ -33,7 +33,7 @@ router.post("/signup", async (req, res) => {
         password: hash,
       })
       .returning("id");
-    res.status(201).json({ msg: `User with id ${newUser.id} created` });
+    res.status(201).json({ msg: `User with id ${newUser.id} created`});
   } catch (err) {
     if (err.code === "23502") {
       return res.status(400).json({ error: "Required field missing" });
