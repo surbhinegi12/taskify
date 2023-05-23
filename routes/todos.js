@@ -72,12 +72,12 @@ router.post("/", verifyToken, async (req, res) => {
 router.put("/:todoId", verifyToken, async (req, res) => {
   try {
     const { todoId } = req.params;
-    const { taskId, deadline, description, priority } = req.body;
+    const { taskId, deadline, description, priority, status } = req.body;
 
     if (taskId) {
       await DB("tasks")
         .where({ id: taskId, todoId })
-        .update({ deadline, description, priority });
+        .update({ deadline, description, priority, status });
       res.status(200).json({ message: "Task updated successfully" });
     } else {
       await DB("tasks").insert({ todoId, deadline, description, priority });
@@ -88,6 +88,26 @@ router.put("/:todoId", verifyToken, async (req, res) => {
     res.status(500).json({ error: "An error occurred while updating/adding the task" });
   }
 });
+
+router.delete("/:todoId", verifyToken, async (req, res) => {
+  try {
+    const { todoId} = req.params;
+    const { taskId} = req.body;
+
+    if (taskId) {
+      await DB("tasks").where({ id: taskId, todoId }).del();
+      res.status(200).json({ message: "Task deleted successfully" });
+    } else {
+      await DB("tasks").where({ todoId }).del();
+      res.status(200).json({ message: "Todo deleted successfully" });
+    }
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ error: "An error occurred while deleting the task/todo" });
+  }
+});
+
+
 
 
 module.exports = router;

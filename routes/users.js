@@ -8,7 +8,7 @@ const bcrypt = require("bcrypt");
 
 router.get("/", async (req, res) => {
   try {
-    const users = await DB("users").select(["id", "name", "password", "email"]);
+    const users = await DB("users").select(["id", "name", "password", "email"]).whereNull("deletedAt");
     res.status(200).json(users);
   } catch (err) {
     res.status(500).json(err);
@@ -48,7 +48,7 @@ router.post("/login", async (req, res) => {
   const { email, password } = req.body;
   try {
     await DB("users")
-      .where({ email })
+      .where({ email }).whereNull("deletedAt")
       .first()
       .then((user) => {
         if (!user) {
@@ -95,13 +95,8 @@ router.delete("/:id", verifyToken, async (req, res) => {
   }
 
   try {
-    await DB("tasks")
-      .whereIn("todoId", function () {
-        this.select("id").from("todos").where("userId", idToDelete);
-      })
-      .delete();
-    await DB("todos").where({ userId: idToDelete }).delete();
-    const result = await DB("users").where({ id: idToDelete }).delete();
+    const deletedAt = new Date();
+    const result = await DB("users").where({ id: idToDelete }).update({deletedAt:deletedAt});
 
     if (result != 0) {
       res.status(200).json({ msg: `User with id ${idToDelete} deleted` });
